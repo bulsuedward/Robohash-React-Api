@@ -8,10 +8,19 @@ import {
   TextField,
 } from "@mui/material";
 
-const AddUserDialog = ({ open, onClose, newUser, setNewUser, onAddUser }) => {
+const AddUserDialog = ({
+  open,
+  onClose,
+  newUser,
+  setNewUser,
+  onAddUser,
+  buttonText,
+}) => {
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Add User</DialogTitle>
+      <DialogTitle>
+        {buttonText === "Save" ? "Edit User" : "Add User"}
+      </DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
@@ -68,7 +77,7 @@ const AddUserDialog = ({ open, onClose, newUser, setNewUser, onAddUser }) => {
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={onAddUser} color="primary">
-          Add User
+          {buttonText}
         </Button>
       </DialogActions>
     </Dialog>

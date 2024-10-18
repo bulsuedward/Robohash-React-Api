@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AddUserDialog from "../components/AddUserDialog";
 import DeleteUserDialog from "../components/DeleteUserDialog";
+import useUpdateUser from "../hooks/UpdateUser"; // Import your custom hook
 import "../css/card.css";
 import "../css/user.css";
 import axios from "axios";
@@ -22,19 +23,26 @@ export default function RoboHash() {
   const [isAddUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [isDeleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState(null);
-  const [newUser, setNewUser] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
-    address: "",
-    comment: "",
-  });
+  const [userToEdit, setUserToEdit] = useState(null); // For tracking the user being edited
 
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-  };
+  // Using the custom hook to manage user updates
+  const {
+    name,
+    setName,
+    address,
+    setAddress,
+    company,
+    setCompany,
+    email,
+    setEmail,
+    phone,
+    setPhone,
+    comment,
+    setComment,
+    updateUser,
+  } = useUpdateUser();
 
+  // Fetch users and comments
   useEffect(() => {
     axios
       .get("https://jsonplaceholder.typicode.com/users")
@@ -54,37 +62,75 @@ export default function RoboHash() {
       });
   }, []);
 
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
   const filteredUsers = users.filter((user) =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Opening Add User Dialog for adding a new user
   const handleClickOpenAddUser = () => {
     setAddUserDialogOpen(true);
-    setNewUser({
-      name: "",
-      email: "",
-      phone: "",
-      company: "",
-      address: "",
-      comment: "",
-    });
+    setUserToEdit(null); // Reset the editing state for new user addition
+    // Reset the new user values using the hook's set functions
+    setName("");
+    setEmail("");
+    setPhone("");
+    setCompany("");
+    setAddress("");
+    setComment("");
+  };
+
+  // Opening Edit Dialog
+  const handleClickOpenEditUser = (user) => {
+    setAddUserDialogOpen(true);
+    setUserToEdit(user.id); // Set the user to be edited
+    // Prefill the form with the selected user's data
+    setName(user.name);
+    setEmail(user.email);
+    setPhone(user.phone);
+    setCompany(user.company.name);
+    setAddress(user.address.city);
+    setComment(user.commentBody);
   };
 
   const handleCloseAddUser = () => {
     setAddUserDialogOpen(false);
   };
 
-  const handleAddUser = () => {
-    const newUserData = {
-      id: users.length + 1,
-      ...newUser,
-      address: { city: newUser.address },
-      company: { name: newUser.company },
-      phone: newUser.phone,
-      commentBody: newUser.comment,
-    };
+  const handleAddOrUpdateUser = () => {
+    if (userToEdit !== null) {
+      // Update existing user
+      const updatedUsers = users.map((user) =>
+        user.id === userToEdit
+          ? {
+              ...user,
+              name,
+              email,
+              phone,
+              address: { city: address },
+              company: { name: company },
+              commentBody: comment,
+            }
+          : user
+      );
+      setUsers(updatedUsers);
+    } else {
+      // Add new user
+      const newUserData = {
+        id: users.slice(-1)[0].id + 1,
+        name,
+        email,
+        phone,
+        address: { city: address },
+        company: { name: company },
+        commentBody: comment,
+      };
+      setUsers([...users, newUserData]);
+    }
 
-    setUsers([...users, newUserData]);
     setAddUserDialogOpen(false);
   };
 
@@ -166,10 +212,17 @@ export default function RoboHash() {
               <CardActions sx={{ justifyContent: "flex-end", mt: "auto" }}>
                 <Button
                   variant="outlined"
+                  color="primary"
+                  onClick={() => handleClickOpenEditUser(user)} // Trigger editing
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="outlined"
                   color="error"
                   onClick={() => handleClickOpenDeleteUser(user.id)}
                 >
-                  Delete User
+                  Delete
                 </Button>
               </CardActions>
             </Card>
@@ -180,9 +233,17 @@ export default function RoboHash() {
       <AddUserDialog
         open={isAddUserDialogOpen}
         onClose={handleCloseAddUser}
-        newUser={newUser}
-        setNewUser={setNewUser}
-        onAddUser={handleAddUser}
+        newUser={{ name, email, phone, address, company, comment }}
+        setNewUser={({ name, email, phone, address, company, comment }) => {
+          setName(name);
+          setEmail(email);
+          setPhone(phone);
+          setAddress(address);
+          setCompany(company);
+          setComment(comment);
+        }}
+        onAddUser={handleAddOrUpdateUser}
+        buttonText={userToEdit !== null ? "Save" : "Add User"} // Use the updated function for both add and edit
       />
       <DeleteUserDialog
         open={isDeleteUserDialogOpen}
